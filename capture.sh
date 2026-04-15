@@ -1,13 +1,14 @@
 #!/bin/bash
 
-FILENAME="$(date +%Y%m%d-%H%M%S).jpg"
+FILENAME="$(TZ='Asia/Seoul' date +%Y%m%d-%H%M%S).jpg"
 TMP_PATH="/tmp/${FILENAME}"
-DEST_DIR="/nfs/share/onychomonitor/pictures"
+DATE_DIR="$(TZ='Asia/Seoul' date +%Y%m%d)"
+DEST_DIR="/nfs/share/onychomonitor/pictures/${DATE_DIR}"
 TMP_PICTURES="/srv/onychomonitor/tmp_pictures"
 LOG_FILE="/srv/onychomonitor/capture.log"
 
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "${LOG_FILE}"
+    echo "$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S') $1" >> "${LOG_FILE}"
 }
 
 mkdir -p "${TMP_PICTURES}"
@@ -25,10 +26,15 @@ fi
 
 # NFS 마운트 확인 및 이동
 if mountpoint -q /nfs/share; then
+    mkdir -p "${DEST_DIR}"
     # 밀린 사진 일괄 전송
     for f in "${TMP_PICTURES}"/*.jpg; do
         [ -f "$f" ] || continue
-        if mv "$f" "${DEST_DIR}/"; then
+        flush_date="${f##*/}"
+        flush_date="${flush_date%%-*}"
+        flush_dir="/nfs/share/onychomonitor/pictures/${flush_date}"
+        mkdir -p "${flush_dir}"
+        if mv "$f" "${flush_dir}/"; then
             log "[OK] flushed $(basename "$f")"
         else
             log "[ERROR] failed to flush $(basename "$f")"
